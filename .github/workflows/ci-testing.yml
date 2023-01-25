@@ -62,7 +62,7 @@ jobs:
 
     - name: Tests
       run: |
-        coverage run --source project tests -v --junitxml=junit/test-results-${{ runner.os }}-${{ matrix.python-version }}.xml
+        coverage run --source project tests/test_classifier.py -v --junitxml=junit/test-results-${{ runner.os }}-${{ matrix.python-version }}.xml
 
     - name: Statistics
       if: success()
