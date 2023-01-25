@@ -13,3 +13,7 @@ def test_lit_classifier():
 
     results = trainer.test(test_dataloaders=test)
     assert results[0]['test_acc'] > 0.7
+
+if __name__ == '__main__':
+    test_lit_classifier()
+    
