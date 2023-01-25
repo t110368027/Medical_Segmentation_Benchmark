@@ -5,20 +5,15 @@
  
 # Medical Segmentation Benchmark
 
-[![Paper](http://img.shields.io/badge/paper-arxiv.1001.2234-B31B1B.svg)](https://www.nature.com/articles/nature14539)
-[![Conference](http://img.shields.io/badge/NeurIPS-2019-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
-[![Conference](http://img.shields.io/badge/ICLR-2019-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
-[![Conference](http://img.shields.io/badge/AnyConference-year-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)  
-<!--
-ARXIV   
-[![Paper](http://img.shields.io/badge/arxiv-math.co:1480.1111-B31B1B.svg)](https://www.nature.com/articles/nature14539)
--->
-![CI testing](https://github.com/PyTorchLightning/deep-learning-project-template/workflows/CI%20testing/badge.svg?branch=master&event=push)
 
 
-<!--  
-Conference   
--->   
+![Python - Version](https://img.shields.io/badge/PYTHON-3.7+-blue?style=for-the-badge&logo=python)
+[![PyTorch - Version](https://img.shields.io/badge/PYTORCH-1.12.1-red?style=for-the-badge&logo=pytorch)](https://github.com/pytorch/pytorch)
+[![Pytorch-Lightning - Version](https://img.shields.io/badge/pytorch_Lightning-1.9.0+-%3CCOLOR%3E.svg?style=for-the-badge&logo=pytorch-lightning&logoColor=green)](https://github.com/Lightning-AI/lightning)
+
+[![MONAI - Version](https://img.shields.io/badge/Monai-1.1.0+-blue?style=for-the-badge)](https://github.com/Project-MONAI/MONAI)
+[![Albumentations - Version](https://img.shields.io/badge/albumentations-1.3.0+-red?style=for-the-badge)](https://github.com/albumentations-team/albumentations/)
+
 </div>
  
 ## Description   
