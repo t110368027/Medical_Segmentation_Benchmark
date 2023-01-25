@@ -7,7 +7,7 @@
 
 
 
-![Python - Version](https://img.shields.io/badge/PYTHON-3.7+-blue?style=for-the-badge&logo=python)
+[![Python - Version](https://img.shields.io/badge/PYTHON-3.7+-blue?style=for-the-badge&logo=python)](https://docs.python.org/3.7/)
 [![PyTorch - Version](https://img.shields.io/badge/PYTORCH-1.12.1-red?style=for-the-badge&logo=pytorch)](https://github.com/pytorch/pytorch)
 [![Pytorch-Lightning - Version](https://img.shields.io/badge/pytorch_Lightning-1.9.0+-%3CCOLOR%3E.svg?style=for-the-badge&logo=pytorch-lightning&logoColor=green)](https://github.com/Lightning-AI/lightning)
 
