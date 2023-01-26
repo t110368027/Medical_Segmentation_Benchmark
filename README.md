@@ -34,6 +34,7 @@ pip install -r requirements.txt
  ```bash
 # run module   
 python train.py -m MODEL -dn DATASET_NAME
+## MODEL UNet, NestedUNet, UNet_3Plus, AttU_Net, R2AttU_Net, and so on
 ## DATASET_NAME CHUAC, DCA1, STARE, CHASEDB1
 ```
 
