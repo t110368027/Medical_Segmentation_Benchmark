@@ -31,7 +31,7 @@ pip install -e .
 pip install -r requirements.txt
  ```   
  Next, navigate to any file and run it.   
- ```bash
+ ```python
 # run module   
 python train.py -m MODEL -dn DATASET_NAME
 ## MODEL UNet, NestedUNet, UNet_3Plus, AttU_Net, R2AttU_Net, and so on
@@ -85,8 +85,8 @@ Choose a path to create a folder with the dataset name and download datasets
 
 Follow data structure tree before.
 
-Then run module convert `.jpg`, `.png` or `.pgm` to numpy array and save it to `.npz` file
- ```bash
+Then run `preprocess.py` convert `.jpg`, `.png` or `.pgm` to numpy array and save it to `.npz` file
+ ```python
 # run module   
 python preprocess.py -dp DATASET_PATH -dn DATASET_NAME
 
