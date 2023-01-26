@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 import albumentations as A
-from augment import get_val_augmentation, get_train_augmentation
-from sklearn.model_selection import train_test_split
+from .augment import get_train_augmentation
+from albumentations.pytorch import ToTensorV2
 
 def get_patch(imgs_list, patch_size=48, stride=6):
     """
@@ -37,13 +37,13 @@ class ImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
                  data_tensor, 
                  target_tensor=None, 
-                 transforms=None):
-        if target_tensor is not None:
-            assert data_tensor.shape[:1] == target_tensor.shape[:1]
+                 transforms=None
+                 ):
+        
         self.data_tensor = data_tensor
+        if target_tensor is not None: assert data_tensor.shape[:1] == target_tensor.shape[:1]
         self.target_tensor = target_tensor
-        if transforms is not None:
-            self.transforms = transforms
+        if transforms is not None: self.transforms = transforms
 
     def __getitem__(self, index):
         data_tensor = self.data_tensor[index]
@@ -70,3 +70,108 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.data_tensor)
+    
+def get_h_w(data_name):
+    if data_name == 'CHASEDB1':
+        h, w = 960, 960
+    elif data_name == 'CHUAC':
+        h, w = 512, 512
+    elif data_name == 'DCA1':
+        h, w = 320, 320
+    elif data_name == 'DRIVE':
+        h, w = 576, 576
+    elif data_name == 'STARE':
+        h, w = 704, 704
+    elif data_name == 'HRF':
+        h, w = 1024, 1024
+    else:
+        h, w = 512, 512
+    return h, w
+
+def get_transform(rand_augment=None, stage='train', height=None, width=None):
+    if stage == 'train':
+        resize_tfm = [A.Resize(height=height,width=width)]
+        rand_tfms = rand_augment() # returns a list of transforms
+        tensor_tfms = [ToTensorV2(transpose_mask=True)]
+        return A.Compose(resize_tfm + rand_tfms + tensor_tfms)
+    elif stage == 'patch':
+        rand_tfms = rand_augment() # returns a list of transforms
+        tensor_tfms = [ToTensorV2(transpose_mask=True)]
+        return A.Compose(rand_tfms + tensor_tfms)
+    else:
+        resize_tfm = [A.Resize(height=height,width=width)]
+        tensor_tfms = [ToTensorV2(transpose_mask=True)]
+        return A.Compose(resize_tfm + tensor_tfms)
+    
+class DataModule(pl.LightningDataModule):
+    def __init__(self, data_dir: str, 
+                 batch_size: int = 8, 
+                 numworkers: int = 0, 
+                 data_name=None,
+                 is_patch=None,
+                 transform=None,
+                 ):
+        super().__init__()
+        self.data_dir = data_dir  # labeled image, mask
+        self.batch_size = batch_size
+        self.numworkers = numworkers
+        self.data_name = data_name  # DRIVE, STARE, DB1, HRF, ......
+        self.is_patch = is_patch
+        if transform is None: get_train_augmentation
+        self.transform = transform
+        
+        if batch_size < 5:
+            self.val_batch_size = 5
+        else:
+            self.val_batch_size = batch_size - (batch_size % 5)
+            
+        h, w = get_h_w(self.data_name)
+        if is_patch:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='patch')
+        else:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='train', height=h, width=w)
+        self.val_aug = get_transform(rand_augment=None, stage='valid', height=h, width=w)  
+    
+    def setup(self, stage=None):
+        with np.load(self.data_dir, allow_pickle=True) as f:
+            x_train, y_train = f['x_train'], f['y_train']
+            x_val, y_val = f['x_val'], f['y_val']
+        print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+        if self.is_patch:
+            x_train, y_train = get_patch(x_train), get_patch(y_train)
+            print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+        self.train_dataset = ImageDataset(x_train, y_train, self.train_aug)
+        self.valid_dataset = ImageDataset(x_val, y_val, self.val_aug)
+        
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=True)
+    
+    def val_dataloader(self):
+        #  Generating val_dataloader
+        return DataLoader(self.valid_dataset,
+                          batch_size=1,
+                          shuffle=False,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=False)
+        
+if __name__ == '__main__':
+    # from augment import get_train_augmentation
+    # dataset = DataModule(
+    #     data_dir = 'datasets/CHUAC/set.npz', 
+    #     batch_size = 512,
+    #     numworkers = 0,
+    #     data_name = "CHUAC",
+    #     is_patch = True,
+    #     transform = get_train_augmentation)
+    # dataset.setup()
+    # train_dataloader = dataset.val_dataloader()
+    # train_features, train_labels = next(iter(train_dataloader))
+    # print(f"Feature batch shape: {train_features.size()}")
+    # print(f"Labels batch shape: {train_labels.size()}")
+    pass

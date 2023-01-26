@@ -1,4 +1,4 @@
-from model_arch import *
+from .model_arch import *
 import torch
 import pytorch_lightning as pl
 from monai.metrics import DiceMetric, ConfusionMatrixMetric
@@ -32,9 +32,9 @@ def get_model(arch, in_ch, out_ch,**kwargs):
 class Model(pl.LightningModule):
     def __init__(self, 
                  arch, 
-                 encoder_name, 
+                 encoder_name=None,  
                  encoder_weights="imagenet", 
-                 in_channels=3, 
+                 in_channels=1, 
                  out_classes=1, 
                  lr=0.01,
                  **kwargs):
