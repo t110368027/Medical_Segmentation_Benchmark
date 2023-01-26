@@ -23,49 +23,75 @@ What it does
 First, install dependencies   
 ```bash
 # clone project   
-git clone https://github.com/YourGithubName/deep-learning-project-template
+git clone https://github.com/t110368027/Medical_Segmentation_Benchmark
 
 # install project   
-cd deep-learning-project-template 
+cd Medical_Segmentation_Benchmark
 pip install -e .   
 pip install -r requirements.txt
  ```   
  Next, navigate to any file and run it.   
  ```bash
-# module folder
-cd project
-
-# run module (example: mnist as your main contribution)   
-python lit_classifier_main.py    
+# run module   
+python train.py
 ```
 
-## Imports
-This project is setup as a package which means you can now easily import any file into any other file like so:
-```python
-from project.datasets.mnist import mnist
-from project.lit_classifier_main import LitClassifier
-from pytorch_lightning import Trainer
-
-# model
-model = LitClassifier()
-
-# data
-train, val, test = mnist()
-
-# train
-trainer = Trainer()
-trainer.fit(model, train, val)
-
-# test using the best model!
-trainer.test(test_dataloaders=test)
+## Prepare dataset
+Before run this project you need to download the dataset :
+```bash
+./Medical_Segmentation_Benchmark/
+├── data/
+│   ├─angiography
+│   │  ├─Hemotool
+│   │  │  └─angio1.png_mask.png  
+│   │  ├─Original
+│   │  │  └─1.png
+│   │  └─Photoshop
+│   │     └─angio1ok.png
+│   ├─CHASE_DB1
+│   │  ├─Images
+│   │  │  └─Image_01L.jpg
+│   │  └─Masks
+│   │     └─Image_01L_1stHO.png
+│   ├─DB_Angiograms_134
+│   │  ├─Database_134_Angiograms
+│   │  │  ├─1.pgm
+│   │  │  ├─1_gt.pgm
+│   ├─STARE
+│   │  ├─imgs
+│   │  │  └─im0001.png
+│   │  └─label-ah
+│         └─im0001.ah.png
+├── datasets/
+│   ├─CHASEDB1
+│   │  └─set.npz
+│   ├─CHUAC
+│   │  └─set.npz
+│   ├─DCA1
+│   │  └─set.npz
+│   └─STARE
+│      └─set.npz
+├── README.md
+└── train.py
+```
+Convert `.jpg`, `.png` or `.pgm` to numpy array and save it to `.npz` file
+ ```bash
+# run module   
+python preprocess.py
 ```
 
-### Citation   
+## Citation   
 ```
-@article{YourName,
-  title={Your Title},
-  author={Your team},
-  journal={Location},
-  year={Year}
+@misc{Medical_Segmentation_Benchmark,
+  author = {Jia-Ming Hou},
+  title = {{Medical_Segmentation_Benchmark}},
+  year = {2023},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/t110368027/Medical_Segmentation_Benchmark}},
+  version = {0.0.1}, 
 }
 ```   
+## License
+ 
+Project is distributed under [Apache 2.0](https://github.com/t110368027/Medical_Segmentation_Benchmark/blob/main/LICENSE)
