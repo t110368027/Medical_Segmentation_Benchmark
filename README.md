@@ -17,7 +17,7 @@
 </div>
  
 ## Description   
-What it does   
+This Project is base on Pytorch and Pytorch-Lightning and focus on Medical Image Segmentation
 
 ## How to run   
 First, install dependencies   
