@@ -33,7 +33,8 @@ pip install -r requirements.txt
  Next, navigate to any file and run it.   
  ```bash
 # run module   
-python train.py
+python train.py -m MODEL -dn DATASET_NAME
+## DATASET_NAME CHUAC, DCA1, STARE, CHASEDB1
 ```
 
 ## Prepare dataset
@@ -74,10 +75,22 @@ Before run this project you need to download the dataset :
 ├── README.md
 └── train.py
 ```
-Convert `.jpg`, `.png` or `.pgm` to numpy array and save it to `.npz` file
+Choose a path to create a folder with the dataset name and download datasets
+
+1. [CHASEDB1](https://blogs.kingston.ac.uk/retinal/chasedb1/)
+2. [STARE](https://cecas.clemson.edu/~ahoover/stare/probing/index.html)
+3. [DCA1](http://personal.cimat.mx:8181/~ivan.cruz/DB_Angiograms.html)
+4. [CHUAC](https://figshare.com/s/4d24cf3d14bc901a94bf)
+
+Follow data structure tree before.
+
+Then run module convert `.jpg`, `.png` or `.pgm` to numpy array and save it to `.npz` file
  ```bash
 # run module   
-python preprocess.py
+python preprocess.py -dp DATASET_PATH -dn DATASET_NAME
+
+## DATASET_PATH ./data
+## DATASET_NAME CHUAC, DCA1, STARE, CHASEDB1
 ```
 
 ## Citation   
