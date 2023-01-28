@@ -187,7 +187,7 @@ def main(args):
         model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
         model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
                                            lr=args.learning_rate)
-        pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=8)
+        pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size)
         evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
         print('\n\n\n================> Total stage 3/3: Re-training on labeled and unlabeled images')
         model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
@@ -228,7 +228,7 @@ def main(args):
     model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
     model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
                                        lr=args.learning_rate)
-    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=8, rel=reliable)
+    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size, rel=reliable)
     evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
     rel_pseudo_path = pseudo_path
     # <================================== The 1st stage re-training ==================================>
@@ -251,7 +251,7 @@ def main(args):
     model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
     model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
                                        lr=args.learning_rate)
-    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=8, rel=unreliable)
+    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size, rel=unreliable)
     evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
     unrel_pseudo_path = pseudo_path
     # <================================== The 2nd stage re-training ==================================>
