@@ -1,15 +1,9 @@
 import os
-import torch
-import ttach as tta
 import argparse
-import numpy as np
-from tqdm import tqdm
 from datetime import datetime
 import pytorch_lightning as pl
-from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-from monai.metrics import DiceMetric, ConfusionMatrixMetric
 from src.model import Model
 from src.dataset import DataModule
 from src.utils import *
@@ -78,3 +72,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args)
+    
+    ## command -- python train.py -m UNet -b 512 -p -dn CHUAC

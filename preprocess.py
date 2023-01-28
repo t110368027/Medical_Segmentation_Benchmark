@@ -136,10 +136,12 @@ def data_process(data_path, name, mode):
                 img_list.append(ToTensor()(img).numpy())     
     img_list = normalization(img_list)
     img_list = np.array(img_list).transpose(0,2,3,1)
+    img_list_name = np.array(img_list_name)
     
-    if name != "STARE_u":
-        gt_list = np.array(gt_list).transpose(0,2,3,1)
-        assert img_list.shape,gt_list.shape
+    if name == "STARE_u":
+        return img_list, None, img_list_name
+    gt_list = np.array(gt_list).transpose(0,2,3,1)
+    assert img_list.shape,gt_list.shape
     
     return img_list, gt_list, img_list_name
 
@@ -184,9 +186,36 @@ if __name__ == '__main__':
     train_img, train_gt, train_name = data_process(args.dataset_path, args.dataset_name, "training")
     val_img, val_gt, val_name = data_process(args.dataset_path, args.dataset_name, "test")
     
-    np.savez_compressed('./datasets/{}/set.npz'.format(args.dataset_name),
-                        x_train=train_img, y_train=train_gt,
-                        x_val=val_img, y_val=val_gt,
-                        train_name=train_name, val_name=val_name
-                        )
+    if args.dataset_name == "STARE":
+        c = 1
+        print(train_name)
+        for i in range(0,20,2):
+            n_val_img, n_val_gt, n_val_name = [], [], []
+            
+            n_train_img = np.delete(train_img,(i,i+1), axis=0)
+            n_train_gt = np.delete(train_gt,(i,i+1), axis=0)
+            n_train_name = np.delete(train_name,(i,i+1), axis=0)
+            
+            n_val_img.append(val_img[i]),n_val_img.append(val_img[i+1])
+            n_val_gt.append(val_gt[i]),n_val_gt.append(val_gt[i+1])
+            n_val_name.append(val_name[i]),n_val_name.append(val_name[i+1])
+            
+            n_val_img, n_val_gt, n_val_name = np.array(n_val_img), np.array(n_val_gt), np.array(n_val_name) 
+            np.savez_compressed('./datasets/{}/set{}.npz'.format(args.dataset_name,c),
+                                x_train=n_train_img, y_train=n_train_gt,
+                                x_val=n_val_img, y_val=n_val_gt,
+                                train_name=n_train_name, val_name=n_val_name
+                                )
+            c+=1
+            
+    elif args.dataset_name == "STARE_u":  
+         np.savez_compressed('./datasets/{}/set.npz'.format(args.dataset_name),
+                            image=train_img,image_name=train_name,
+                            )
+    else:
+        np.savez_compressed('./datasets/{}/set.npz'.format(args.dataset_name),
+                            x_train=train_img, y_train=train_gt,
+                            x_val=val_img, y_val=val_gt,
+                            train_name=train_name, val_name=val_name
+                            )
     

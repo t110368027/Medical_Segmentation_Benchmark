@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 import albumentations as A
-from .augment import get_train_augmentation
+from .augment import *
 from albumentations.pytorch import ToTensorV2
 
 def get_patch(imgs_list, patch_size=48, stride=6):
@@ -159,6 +159,92 @@ class DataModule(pl.LightningDataModule):
                           num_workers=self.numworkers,
                           pin_memory=True,
                           drop_last=False)
+        
+
+class DataModule_ST(pl.LightningDataModule):
+    def __init__(self, data_dir: str,
+                 data_dir_u: str = None,
+                 data_dir_p: str = None,
+                 batch_size: int = 8, 
+                 numworkers: int = 0, 
+                 data_name=None,
+                 is_patch=None,
+                 transform=None,
+                 rel=None,
+                 ):
+        super().__init__()
+        self.data_dir = data_dir  # labeled image, mask
+        self.batch_size = batch_size
+        self.numworkers = numworkers
+        self.data_name = data_name  # DRIVE, STARE, DB1, HRF, ......
+        self.is_patch = is_patch
+        if transform is None: get_train_augmentation
+        self.transform = transform
+        self.data_dir_u = data_dir_u
+        self.data_dir_p = data_dir_p
+        self.rel = rel
+        if batch_size < 5:
+            self.val_batch_size = 5
+        else:
+            self.val_batch_size = batch_size - (batch_size % 5)
+            
+        h, w = get_h_w(self.data_name)
+        if is_patch:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='patch')
+        else:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='train', height=h, width=w)
+        self.val_aug = get_transform(rand_augment=None, stage='valid', height=h, width=w)  
+    
+    def setup(self, stage=None):
+        with np.load(self.data_dir, allow_pickle=True) as f:
+            x_train, y_train = f['x_train'], f['y_train']
+            x_val, y_val = f['x_val'], f['y_val']
+        with np.load(self.data_dir_u, allow_pickle=True) as f:
+            x_u, x_u_name = f['image'], f['image_name']
+        with np.load(self.data_dir_p, allow_pickle=True) as f:
+            y_u, y_u_name = f['image'], f['image_name']
+        print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+        if self.rel is not None:
+            rel_x, rel_x_name = [], []
+            for id_y in y_u_name:
+                for idx, id_x in enumerate(x_u_name):
+                    if id_y == id_x:
+                        rel_x.append(x_u[idx])
+                        rel_x_name.append(x_u_name[idx])
+            del x_u, x_u_name
+            x_u, x_u_name = np.array(rel_x), np.array(rel_x_name)
+        print(x_u.shape, y_u.shape)
+        transform = A.Compose([A.Resize(height=x_u[0].shape[0], width=x_u[0].shape[1], interpolation=cv2.INTER_AREA)])
+        y_u_ = []
+        for img in y_u:
+            y_u_.append(transform(image=img)['image'])
+        y_u = np.array(y_u_)
+        if self.is_patch:
+            x_train, y_train = get_patch(x_train), get_patch(y_train)
+            x_u, y_u = get_patch(x_u), get_patch(y_u)
+            print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+            print(x_u.shape, y_u.shape)
+        x_semi, y_semi = np.concatenate((x_train, x_u)), np.concatenate((y_train, y_u))
+        self.train_dataset = ImageDataset(x_semi, y_semi, self.train_aug)
+        self.valid_dataset = ImageDataset(x_val, y_val, self.val_aug)
+        
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=True)
+    
+    def val_dataloader(self):
+        #  Generating val_dataloader
+        return DataLoader(self.valid_dataset,
+                          batch_size=1,
+                          shuffle=False,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=False)
+
         
 if __name__ == '__main__':
     # from augment import get_train_augmentation
