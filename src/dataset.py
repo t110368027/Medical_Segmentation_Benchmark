@@ -12,7 +12,7 @@ def get_patch(imgs_list, patch_size=48, stride=6):
     """
     image_list is a numpy array (B, H, W, C)
     all get_patch operate is on tensor (B, C, H, W)
-    finally return numpy array patch data set (Patch, H, W, C)
+    finally return numpy array patch data set (Patch, patch_size, patch_size, C)
     """
     image_list = []
     imgs_list = imgs_list.transpose((0,3,1,2))
@@ -245,7 +245,85 @@ class DataModule_ST(pl.LightningDataModule):
                           pin_memory=True,
                           drop_last=False)
 
+
+class DataModule_S3(pl.LightningDataModule):
+    def __init__(self, data_dir: str,
+                 data_dir_u: str = None,
+                 batch_size: int = 8,
+                 semi_batch_size: int=8,
+                 numworkers: int = 0, 
+                 data_name=None,
+                 is_patch=None,
+                 transform=None,
+                 transform2=None,
+                 ):
+        super().__init__()
+        self.data_dir = data_dir  # labeled image, mask
+        self.batch_size = batch_size
+        self.semi_batch_size = semi_batch_size
+        self.numworkers = numworkers
+        self.data_name = data_name  # DRIVE, STARE, DB1, HRF, ......
+        self.is_patch = is_patch
+        if transform is None: get_train_augmentation
+        self.transform = transform
+        self.transform2 = transform2
+        self.data_dir_u = data_dir_u
+        if batch_size < 5:
+            self.val_batch_size = 5
+        else:
+            self.val_batch_size = batch_size - (batch_size % 5)
+            
+        h, w = get_h_w(self.data_name)
+        if is_patch:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='patch')
+            self.train_aug2 = get_transform(rand_augment=self.transform2, stage='patch')
+        else:
+            self.train_aug = get_transform(rand_augment=self.transform, stage='train', height=h, width=w)
+            self.train_aug2 = get_transform(rand_augment=self.transform2, stage='train', height=h, width=w)
+        self.val_aug = get_transform(rand_augment=None, stage='valid', height=h, width=w)  
+    
+    def setup(self, stage=None):
+        with np.load(self.data_dir, allow_pickle=True) as f:
+            x_train, y_train = f['x_train'], f['y_train']
+            x_val, y_val = f['x_val'], f['y_val']
+        with np.load(self.data_dir_u, allow_pickle=True) as f:
+            x_u, x_u_name = f['image'], f['image_name']
+        print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+        print(x_u.shape)
+        if self.is_patch:
+            x_train, y_train = get_patch(x_train), get_patch(y_train)
+            x_u = get_patch(x_u)
+            print(x_train.shape, x_val.shape, y_train.shape, y_val.shape)
+            print(x_u.shape)
+        self.train_dataset = ImageDataset(x_train, y_train, self.train_aug)
+        self.train_dataset_u = ImageDataset(x_u, x_u, self.train_aug2)
+        self.valid_dataset = ImageDataset(x_val, y_val, self.val_aug)
         
+    def train_dataloader(self):
+        train_loader = DataLoader(self.train_dataset,
+                          batch_size=self.batch_size,
+                          shuffle=True,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=True)
+        train_u_loader = DataLoader(self.train_dataset_u,
+                          batch_size=self.semi_batch_size,
+                          shuffle=True,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=True)
+        
+        return {"labeled": train_loader, "unlabeled": train_u_loader}
+    
+    def val_dataloader(self):
+        #  Generating val_dataloader
+        return DataLoader(self.valid_dataset,
+                          batch_size=1,
+                          shuffle=False,
+                          num_workers=self.numworkers,
+                          pin_memory=True,
+                          drop_last=False)
+    
 if __name__ == '__main__':
     # from augment import get_train_augmentation
     # dataset = DataModule(

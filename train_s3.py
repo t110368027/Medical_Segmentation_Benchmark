@@ -7,7 +7,8 @@ from datetime import datetime
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import CSVLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
-from src.model import Model
+from pytorch_lightning.strategies import DDPStrategy
+from src.model import *
 from src.dataset import *
 from src.utils import *
 from src.augment import *
@@ -162,6 +163,7 @@ def train(args, model, dataset):
     trainer = pl.Trainer(
         accelerator = "gpu",
         devices = [args.gpu],
+        strategy=DDPStrategy(find_unused_parameters=False), sync_batchnorm=False,
         max_epochs = args.epoch,
         precision = 16,
         fast_dev_run = False,
@@ -177,115 +179,17 @@ def train(args, model, dataset):
 def main(args):
     data_path = os.path.join(args.dataset_path, args.dataset_name,'set1.npz')
     unlabeled_path = os.path.join(args.dataset_path, args.dataset_name_unlabeled,'set.npz')
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    print('\n================> Total stage 1/3: Supervised training on labeled images (SupOnly)')
-    dataset = DataModule(data_dir = data_path, 
-                         batch_size = args.batch_size,
-                         numworkers = args.numworkers,
-                         data_name = args.dataset_name,
-                         is_patch = args.is_patch,
-                         transform = get_st_augmentation)
-    mode_states = 'sup'
+    model = Model_S3(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
+    dataset = DataModule_S3(data_path, unlabeled_path,
+                            batch_size = args.batch_size,
+                            numworkers = args.numworkers,
+                            data_name = args.dataset_name,
+                            is_patch = args.is_patch,
+                            transform=get_train_augmentation,
+                            transform2=get_s3_augmentation
+                            )
+    mode_status = 'sup'
     train(args, model, dataset)
-    if args.st_train:
-        print('\n\n\n================> Total stage 2/3: Pseudo labeling all unlabeled images')
-        log_path, model_path, checkpoint_path, version, pseudo_path = path_all(args,args.batch_size, None, 'st_pseudo.npz')
-        print(log_path,'\n' , str(version), '\n', model_path, '\n', checkpoint_path, '\n', pseudo_path)
-        model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-        model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
-                                           lr=args.learning_rate)
-        pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size)
-        evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
-        print('\n\n\n================> Total stage 3/3: Re-training on labeled and unlabeled images')
-        model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-        semi_data = DataModule_ST(data_dir = data_path, 
-                                  data_dir_u= unlabeled_path,
-                                  data_dir_p= pseudo_path,
-                                  batch_size = args.semi_batch_size,
-                                  numworkers = args.numworkers,
-                                  data_name = args.dataset_name,
-                                  is_patch = False,
-                                  transform = get_stp_augmentation)
-        mode_states = 'semi'
-        train(args, model, semi_data)
-        print('\n\n\n================> Model Evaluation on labeled image')
-        log_path, model_path, checkpoint_path, version, pred_path = path_all(args,args.semi_batch_size, None, 'st_pred.npz')
-        print(log_path,'\n' , str(version), '\n', model_path, '\n', checkpoint_path, '\n', pred_path)
-        model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-        model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
-                                           lr=args.learning_rate)
-        
-        dataset.setup()
-        val_data = dataset.val_dataloader()
-        evaluate(args, model, val_data, pred_path, mode='val')
-        return
-    """
-        ST++ framework with selective re-training
-    """
-    # <===================================== Select Reliable IDs =====================================>
-    print('\n\n\n================> Total stage 2/6: Select reliable images for the 1st stage re-training')
-    log_path, model_path, checkpoint_path, version, pseudo_path = path_all(args,args.batch_size, None, 'stplus_rel_pseudo.npz')
-    print(log_path,'\n' , str(version), '\n', model_path, '\n', checkpoint_path, '\n', pseudo_path)
-    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=1)
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    reliable, unreliable = select_reliable(args, model=model,dataset=pseudo_data, 
-                                           save_path=model_path.replace('checkpoints', 'outdir'),
-                                           model_path=model_path, name=pseudo_id)
-    # <================================ Pseudo label reliable images =================================>
-    print('\n\n\n================> Total stage 3/6: Pseudo labeling reliable images')
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
-                                       lr=args.learning_rate)
-    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size, rel=reliable)
-    evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
-    rel_pseudo_path = pseudo_path
-    # <================================== The 1st stage re-training ==================================>
-    print('\n\n\n================> Total stage 4/6: The 1st stage re-training on labeled and reliable unlabeled images')
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    semi_data = DataModule_ST(data_dir = data_path, 
-                            data_dir_u= unlabeled_path,
-                            data_dir_p= pseudo_path,
-                            batch_size = args.semi_batch_size,
-                            numworkers = args.numworkers,
-                            data_name = args.dataset_name,
-                            is_patch = False,
-                            transform = get_stp_augmentation,
-                            rel=True)
-    mode_states = 'semi'
-    train(args, model, semi_data)
-    # <=============================== Pseudo label unreliable images ================================>
-    print('\n\n\n================> Total stage 5/6: Pseudo labeling unreliable images')
-    log_path, model_path, checkpoint_path, version, pseudo_path = path_all(args,args.semi_batch_size, None, 'stplus_unrel_pseudo.npz')
-    print(log_path,'\n' , str(version), '\n', model_path, '\n', checkpoint_path, '\n', pseudo_path)
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
-                                       lr=args.learning_rate)
-    pseudo_data, pseudo_id = evaluate_data(args, unlabeled_path, batch_size=args.evaluate_batch_size, rel=unreliable)
-    evaluate(args, model, pseudo_data, pseudo_path, mode='pseudo', name=pseudo_id)
-    unrel_pseudo_path = pseudo_path
-    # <================================== The 2nd stage re-training ==================================>
-    print('\n\n\n================> Total stage 6/6: The 2nd stage re-training on labeled and all unlabeled images')
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    pseudo_path = combine_pseudo_data(rel_pseudo_path, unrel_pseudo_path, 'stplus_all_pseudo.npz')
-    semi_data = DataModule_ST(data_dir = data_path, 
-                            data_dir_u= unlabeled_path,
-                            data_dir_p= pseudo_path,
-                            batch_size = args.semi_batch_size,
-                            numworkers = args.numworkers,
-                            data_name = args.dataset_name,
-                            is_patch = False,
-                            transform = get_stp_augmentation,
-                            rel=True)
-    train(args, model, semi_data)
-    print('\n\n\n================> Model Evaluation on labeled image')
-    log_path, model_path, checkpoint_path, version, pred_path = path_all(args,args.semi_batch_size, None, 'stplus_pred.npz')
-    print(log_path,'\n' , str(version), '\n', model_path, '\n', checkpoint_path, '\n', pseudo_path)
-    model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
-    model = model.load_from_checkpoint(checkpoint_path, arch=args.model, in_channels=1, out_channels=1, 
-                                        lr=args.learning_rate)
-    dataset.setup()
-    val_data = dataset.val_dataloader()
-    evaluate(args, model, val_data, pred_path, mode='val')
     return
 
 if __name__ == "__main__":
@@ -301,7 +205,7 @@ if __name__ == "__main__":
                         help='patch image of slide window for whole image')
     parser.add_argument('-n', '--numworkers', default=0, type=int,
                         help='number of workers')
-    parser.add_argument('-g', '--gpu', default=0)
+    parser.add_argument('-g', '--gpu', default=0, type=int,)
     parser.add_argument('-e', '--epoch', default=50, type=int,
                         help='training epoch')
     parser.add_argument('-lr', '--learning_rate', default=0.001, type=float)
@@ -316,5 +220,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args)
-    
-    ## command -- python train_st.py -m UNet -b 4 -dn STARE -e 1 -sb 4 -eb 16
