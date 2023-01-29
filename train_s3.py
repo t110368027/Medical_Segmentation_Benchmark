@@ -182,6 +182,7 @@ def main(args):
     model = Model_S3(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
     dataset = DataModule_S3(data_path, unlabeled_path,
                             batch_size = args.batch_size,
+                            semi_batch_size=args.semi_batch_size,
                             numworkers = args.numworkers,
                             data_name = args.dataset_name,
                             is_patch = args.is_patch,

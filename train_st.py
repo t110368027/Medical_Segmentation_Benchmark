@@ -175,7 +175,7 @@ def train(args, model, dataset):
     return
 
 def main(args):
-    data_path = os.path.join(args.dataset_path, args.dataset_name,'set1.npz')
+    data_path = os.path.join(args.dataset_path, args.dataset_name,'set3.npz')
     unlabeled_path = os.path.join(args.dataset_path, args.dataset_name_unlabeled,'set.npz')
     model = Model(arch=args.model, in_channels=1, out_channels=1, lr=args.learning_rate)
     print('\n================> Total stage 1/3: Supervised training on labeled images (SupOnly)')
